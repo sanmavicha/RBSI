@@ -1,0 +1,250 @@
+---
+title: "**RBSI OLS and Interpretation Lab**"
+author: "Mateo Villamizar-Chaparro (sv161@duke.edu)"
+date: "June 2022"
+output: 
+  html_document: 
+    toc: true
+    toc_float: TRUE
+    toc_collapsed: FALSE
+    number_sections: FALSE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(stargazer)
+library(ggeffects)
+```
+
+## **The Goal of the lab**
+
+The goal for today is to keep learning how to use **ordinary least squares (OLS)** to analyze the relationship between variables. For this lab we are going to use a version of the 2016 ANES. A lot of you will be using this dataset for your projects so this might be helpful. In particular, we are trying to understand how participation is both driven by income. You can find in Sakai a csv file called *lab_Visualization_Data* that we are going to use today. This file contains seven variables and 2762 observations from the 2016 ANES. The variables are as follows: 
+
+  + *Vote*: Indicator variable if the individual casted a vote
+  + *Black*: Indicator variable if the individual self-identified as black
+  + *Hisp*: Indicator variable if the individual self-identified as hispanic
+  + *pid7*: 7-point partisan identification scale
+  + *income*: income category for the respondent
+  + *age*: age of the respondent at the time of the survey
+  + *educ_attain*: Highest educational attainment from the individual at the time of the survey.
+
+## **First things first: Dependent and Independent variables**
+For today's aim identify:
+
+  + What is the unit of analysis?
+  + Which would be the independent and dependent variables of this research question. 
+  + What would you say is the theory behind their relationship?
+  + What would be a hypothesis?
+  + What would be the mechanism? 
+  
+## **Interpreting and Graphing OLS Results**:
+
+### Remembering some of last lab's commands
+
+Load your data and call it `anes`. After that, create a new object called `subset_anes` that contains the variables vote, Hispanic, and educational attainment. With the `subset_anes` data create a new variable called educ_hisp that is equal to one if the individual is Hispanic and has at least a 4 in their educational attainment variable. Calculate the mean and the median of this variable. 
+
+```{r anes_model_st, eval=FALSE}
+# Remember to set your working directory!
+setwd(_______)
+
+# load your data and make it in a data frame format. Always include the extension at the end of the file. 
+anes <- as.data.frame(_____("lab_Interpretation_Data.____"))
+
+# create subset_anes
+vars <- c("___", "____", "educ_attain")
+sub_anes <- anes[vars]
+
+# Create the new variable
+sub_anes <- _____ %>% mutate(edu_black = _____(hisp==1 _ ______,_,_))
+
+# Calculate mean and median
+mean_edu_hisp <- _____(____$edu_black)
+
+med_edu_hisp <- _______(___________)
+
+```
+What are the substantive meaning of these numbers?
+
+Mean: `r round(mean_edu_hisp,3)`
+
+Median: `r med_edu_hisp`
+
+
+### Interpretations
+
+In our model, we are using a dichotomous dependent variable. Thus, the "units" will be know as **percentage points** which is different to percentages. Also, unless you have a causal framework it is better to talk about correlations and not clear effects. Finally, all interpretations are under the assumption that all the other parts of the model remain constant (ceteris paribus).
+
+For this part of the lab, we will run a **linear probability model (LPM)**. Logit and probit models can also be used to estimate dichotomous variables. However, for ease of interpretation, we will be going with an LPM. If you want to know more about logit and probit models send Gloria or me an email/slack message. 
+
+Run a first model that shows the correlation between voting and being Black and Hispanic. Then run another model that includes partisan identification, income, age and educational attainment as controls. Create a stargazer table for both models where only the racial categories appear. 
+
+```{r models_st, warning=FALSE, echo=TRUE, message=FALSE, eval=FALSE}
+# Run your first model
+m1 <- ___(vote ~ __ + ____, _____ = anes)
+
+# Run your second model
+m2 <- ___(____________________________________, _______ = anes)
+
+# Table
+stargazer(_____, ______, type="text",
+          title            = "_________",                        # Give a title to the table 
+          covariate.labels = c("Black", "Hispanic"),             # Choose the labels for the variables you want to show  
+          dep.var.caption  = "OLS Models",                       # Name your columns
+          dep.var.labels   = "Voted",                            # Name your dependent variable
+          add.lines = list(c("________", "No", "Yes")),          # add lines of info
+          keep = c("_____","____"),                              # keep certain variables  
+          out="table1.doc")                                      # for nicer looking exported tables change text for html in type
+```
+
+What model would you choose to present and why?
+
+### Dichotomous and continuous variables
+
+Let's first understand a bit mote how the results from `summary` are presented in the `stargazer` tables. 
+
+```{r sum_m2, echo=FALSE}
+summary(m2)
+stargazer(m2, type="text")
+```
+
+1. **Effects of dummy variables:**  When interpreting dummy variables it is very important to know what is the **baseline category** (the zero value) of the variable. Since the interpretation will always be with respect to this baseline categories. It is also important to know if the categories are **collectively exhaustive**. Which is a fancy name for coverage of the entire probability space. For instance, a respondent that self-identifies as black will be 0.14 percentage points less prone to vote when compared to non-black respondents. You can also say that being black is associated with a decrease in the probability of voting of 0.14 percentage points when compared to non blacks. If the population or sample is only comprised by black and white people, you could make the baseline categories whites. If there is a larger variation of ethnic groups is better to leave as non-black.  
+
+2. **Effects of continuous variables:** When dealing with continuous variables, it is key you identify the **unit** of the variable, For instance, one more year of life is associated with a 0.001 percentage point increase in the probability of voting. We could also assume income categories are continuous and say that a one unit change in income is associated with a decrease of 0.001 percentage points on the probability of voting. 
+
+### Looking at the results Graphically
+
+#### Canned functions
+
+```{r arm, warning=FALSE, echo=FALSE, message=FALSE}
+# install.packages("arm")
+library(arm)                                         # you will need to install this and the lme4 package
+coefplot(m2,                                         # the model you want to graph
+         intercept = F,                              # if you want to include the intercept
+         main = "Coefficient Plot",                  # Title
+         varnames = c("intercept", "Black", "Hispanic", "Ideology", "Income", "Age", "Education"))
+```
+
+Let's run a new model and graph it's results.
+
+```{r gr_ex, eval=FALSE}
+m3 <- _______________
+
+________ (______,
+          intercept = ____,
+          main = "__________",
+          variables = _("___", "_____", "______"))
+```
+
+#### Using ggplot (more next class)
+For most coefplots, we will need to create a placeholder matrix and then use the graphing functions and attributes we have seen. You can also use base R instead of `coefplot` to produce these kind of graphs. If you are interested in learning how to do this. Let us know and we can go through some code together. This placeholder matrix will be a "small dataset" with the coefficients, standard errors and confidence intervals to graph later. 
+
+```{r coefplot1, echo=FALSE}
+# Run your model
+out <- summary(m2)                                                                    # Create a placeholder for the summary results
+n <- nrow(out$coefficients)                                                           # Number of coefficients in the model
+# Create a placeholder matrix
+coefMat <- matrix(NA, n-1, 4)
+coefMat[,1] <- out$coefficients[2:n,1]
+coefMat[,2] <- out$coefficients[2:n,2]
+coefMat[,3] <- coefMat[,1] - qnorm(1-0.05/2)*coefMat[,2]
+coefMat[,4] <- coefMat[,1] + qnorm(1-0.05/2)*coefMat[,2]
+rownames(coefMat) <- c("Black", "Hispanic", "Ideology", "Income", "Age", "Education")
+colnames(coefMat) <- c("coef", "std_err", "min", "max")
+df <- as.data.frame(coefMat)
+# Plot
+coefplot <- ggplot(data = df, aes(x = rownames(coefMat),
+                           y = coef)) + 
+   geom_hline(yintercept=0, colour="black", size=1, linetype="dotted") +
+   geom_linerange(aes(ymin=min, ymax=max), size=0.2, color="#0a55fd") + 
+   geom_point(color="#0a55fd") + 
+   labs(x="Coefficient", y="Estimate", title="Coefficient Plot") +  
+   coord_flip() + theme_classic()
+
+coefplot
+```
+
+I prefer to use ggplot or basic R since it is easier to customize than coefplot. 
+
+## **Interactions**
+
+3. **Effects of interactions:** You can also have a model with an interaction. This will make interpretation a bit trickier. For this section, let's simplify our model and analyze the probability of voting with respect to being hispanic, the education level of the individual and their interaction. Here, we could hypothesize that more educated hispanics will vote more. The model we want to estimate is:
+
+$$ vote_i = \beta_0 +\beta_1hisp_i + \beta_2 educ_i + \beta_3 hisp_i\times educ_i + \epsilon_i$$
+In this case:
+
+   + the average effect of being hispanic is: $Pr(vote_i | hisp=1) = \beta_0 +\beta_1 + \beta_2 income_i + \beta_3 income$.
+   + the average effect of not being hispanic is: $Pr(vote_i | hisp=0) = \beta_0 + \beta_2 income_i$
+   + $\beta_1$ is the effect of hispanic at no levels of income (not so telling)
+   + $\beta_2$ is the effect of income for non-hispanics
+   + $\beta_3$ is the interaction effect, it is the marginal effect of being hispanic at each level of income
+
+
+Let's run and interpret another interaction model
+```{r inter_st, eval=FALSE}
+m5 <- ___(_____)
+summary(m5)
+```
+
+## **Predictions and Marginal Effects**
+
+Interpreting interaction effects can be hard. The easiest way is to show the marginal changes visually. In other words, we can plot the effects of interactions. These are usually known as **marginal effect plots**. For this, we can use a combination of `ggplot` and `ggeffects` or use base R. We would look at this on the next lab. For today, I want to explain a bit more what the `predict` command does and how it is helpful to deal with interactions. 
+
+### Why predict?
+
+The goal of running statistical models is not only identifying the correlations between variables but, in some cases, use this information to generate predictions. Recent machine learning models use predictions from statistical models to recommend you songs (i.e. Spotify), shows (i.e. Netflix). What people sometimes call the *algorithm* is just how the predictions are made. We can use our regression estimates to predict the probability of voting of the people in our sample. In this case, we would be calculating:
+
+$$ \hat{vote_i} = \hat{\beta_0} +\hat{\beta_1} hisp_i + \hat{\beta_2} edu_i + \hat{\beta_3} hisp_i\times edu_i$$
+```{r pred}
+m4 <- lm(vote ~ hisp*educ_attain, data = sub_anes)
+# Initial data
+head(as.data.frame(sub_anes))
+
+# Predict command
+sub_anes$pred_data <- predict(m4,                     # model used
+                              type="response")        # type of response, see ?predict for multiple outputs
+# Final look of the dataset
+head(as.data.frame(sub_anes))
+
+```
+
+If we were to plot the predicted effects we would something like this:
+
+``` {r margplot3, echo=FALSE}
+# You will need to install and then load the ggeffects package
+# install.packages("ggeffects")
+library(ggeffects)
+# Create an object holder for the predictions
+effects <- ggpredict(m4,                                            # model
+                     terms = c("educ_attain", "hisp"))              # variables you want to graph
+
+# Make the graph
+p5 <- ggplot(effects, aes(x = x, y = predicted, color = group)) + 
+   geom_line() + 
+   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1) + 
+   scale_color_manual(labels = c("Non Hispanic", "Hispanic"), values = c("blue", "red")) +
+      labs(x = "Education",
+        y = "Probabilitty of Voting",
+        title = "Correlation between Income for Hispanic Respondents", 
+        caption = "Source: ANES, 2016") +
+   theme_classic()
+p5
+```
+
+## **The new functions we used today**
+   
+   + ggplot()
+   + predict()
+   + coefplot()
+   + ggeffects()
+
+## **Some additional resources**
+1. There is a whole art behind visualization and making graphs in R. Here are some links that might be useful when producing different visualizations of your data. 
+   + I found the Computational Social Science webpages from [Tiago Ventura](https://tiagoventura.rbind.io/teaching/), [Yae Jeon Kim](https://jaeyk.github.io/PS239T/) and Summer Institute of Computational Social Science [(SICSS)](https://sicss.io/boot_camp) useful for the elaboration of this lab. Some of the examples are the same and others are inspired on them.  
+   + I also highly recommend Kieran Healy's [book](https://socviz.co/index.html#preface) on Data Visualization using ggplot.
+   + There is also a ggplot [cheat sheet](https://github.com/rstudio/cheatsheets/blob/master/data-visualization-2.1.pdf) that is always handy. 
+   + Here are some ggplot visualization [examples](http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html)
+

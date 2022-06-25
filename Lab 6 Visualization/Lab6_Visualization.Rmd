@@ -1,0 +1,409 @@
+---
+title: "**RBSI Visualization and Interpretation Lab**"
+author: "Mateo Villamizar-Chaparro (sv161@duke.edu)"
+date: "May 2021"
+output: 
+  html_document: 
+    toc: true
+    toc_float: TRUE
+    toc_collapsed: FALSE
+    number_sections: FALSE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("C:/Users/Mateo Chaparro/Dropbox/Documentos/0_Duke/4_FourthYear/1_Summer/RBSI/Labs/Lab 5 Visualization") 
+```
+## **Visualization in R**:
+There are a **myriad** ways of using R to visualize data. I think the most common one is the function *ggplot*; Which allows you to produce and change the different settings of a graph. Also, ggplot works as a function where you add attributes until you get the graph you want. Today's Lab, we will be going to some basic data visualization that is often used to analyze data. We will be using the dataset contained in the *gapminder* library which contains country-level information about population, GDP per capita and life expectancy for most countries in the world. It is a very common dataset to look at some of the basic features of *ggplot*. It is also stored as a tibble that is a type of data structure that might be convenient to use. You don't need to always have your data set as tibble, but could make some processes easier, specially if you like to use the tidyverse functions. 
+
+```{r gapminder, warning=FALSE}
+#install.packages("library") # install the gapminder package, it might show you a warning but it will still work.
+library(gapminder)           # Load the gapminder library
+library(ggplot2)             # Load the ggplot2, make sure you have it installed with the install.packages function
+head(gapminder)
+```
+
+The table above shows the first 6 rows of the *gapminder* dataset. Here we can see we have a dataset in a long format, because every row is a country-year observation. For this first part, we will try to see if there is any relationship between life expectancy and GDP per capita. We will start building a scatter plot of our data using life expectancy as the **y-axis** and GDP per capita in the **x-axis**. However, before starting let's see a bit about what Y.J. Kim calls the *grammar of graphics*.
+
+### The Grammar of Graphics (Kim, 2021)
+
+The ggplot function has a very specific grammar that is very useful to know, because it will allow us to determine what parts of the code we would like to transform when we want to make changes to the data. You won't need to always specify these as their default options are usually sensible ones. 
+
+   + Data: What is our dataset
+   + Aesthetic attributes: color, shape, size, etc
+   + Geometric objects: What do I want to graph?
+   + Statistics: Summary statistics we might want to include
+   + Coordinate: Data coordinates for specific objects or scale changes
+   + Facetting: layout specifications, labels 
+
+### Scatterplot
+A couple of points here. First, we do not need to create a new dataframe for our gapminder data since we are using the gapminder package. So, when you're doing your papers make sure you are using your own data and calling the right variables. Remember R is case sensitive and some functions would not work with missing data. Let's first create the plot by calling the data and setting the axis 
+```{r scatter1, warning=FALSE}
+p1 <- ggplot(data= gapminder,                           # dataset you want to use
+            mapping = aes(x = gdpPercap, y = lifeExp))  # Define your x and y axis. 
+p1
+```
+Since we want to do a scatterplot, let's add the geometric objects to populate our plot. There are two way of doing this. First, by adding attributes to a ggplot object or to add all attributes into the same plot.
+
+```{r scatter2, warning=FALSE}
+# Adding attributes
+p1 <- p1 + geom_point()                                    # We are adding points since we want a scatter plot
+p1
+
+# All at the same time
+p1 <- ggplot(data= gapminder,                              # dataset you want to use
+            mapping = aes(x = gdpPercap, y = lifeExp)) +   # Define axis
+   geom_point()                                            # adding points
+p1
+```
+
+### More aesthetic changes
+
+The plot we produced is legible and shows the relationship between life expectancy and GDP per capita. But, we could do some changes to make it look better or present some additional information we have in our dataset. 
+
+1. Let's make the point's size show the population of each country-year. For that, we will add the *size* option in the *aes* options. Always be conscious about the number of parenthesis. 
+```{r scatter3, warning=FALSE}
+
+p1 <- ggplot(data= gapminder,                              # dataset you want to use
+            mapping = aes(x = gdpPercap, y = lifeExp,      # Define axis
+                          size = pop)) +                   # Make size change with the population
+   geom_point()                                            # adding points
+p1
+```
+If we look closer, we can see that the points now have different sizes depending on the country's population size.
+
+2. Let's make the color of the points show the continent of each observation. 
+
+```{r scatter4, warning=FALSE}
+
+p1 <- ggplot(data= gapminder,                              # dataset you want to use
+            mapping = aes(x = gdpPercap, y = lifeExp,      # Define axis
+                          size = pop,                      # Make size change with the population
+                          color = continent)) +            # Make color change with the country's continent
+   geom_point()                                            # adding points
+p1
+```
+
+3. We can also change the attributes of the points themselves, like their shape, size and color by adding attributes to the *geom_point* function
+
+```{r scatter5, warning=FALSE}
+
+p1 <- ggplot(data= gapminder,                              # dataset you want to use
+            mapping = aes(x = gdpPercap, y = lifeExp)) +   # axis
+   geom_point(shape = 15,                                  # Shape of the points, try these numbers 0, 1, 2, 3, 4, 10, 14
+              color = "blue",                              # color, you can write the color or use a hex number
+              size = 2)                                    # size of the dots
+p1
+```
+4. We can even change the shading of the points given changes in other variables
+
+```{r scatter6, warning=FALSE}
+
+p1 <- ggplot(data= gapminder,                              # dataset you want to use
+            mapping = aes(x = gdpPercap, y = lifeExp)) +   # axis
+   geom_point(shape = 15,                                  # Shape of the points, try these numbers 0, 1, 2, 3, 4, 10, 14
+              color = "blue",                              # color, you can write the color or use a hex number
+              size = 2,                                    # size of the dots
+              aes(alpha = pop))                            # Use shades of blue to show changes in population      
+p1
+```
+5. Graphs should speak by themselves. As such, we might want to make some more legible labels and add a title.
+
+```{r scatter7, warning=FALSE}
+
+p1 <- ggplot(data= gapminder,                              # dataset you want to use
+            mapping = aes(x = gdpPercap, y = lifeExp)) +   # axis
+   geom_point(shape = 15,                                  # Shape of the points, try these numbers 0, 1, 2, 3, 4, 10, 14
+              color = "#012169",                           # color, you can write the color or use a hex number
+              size = 2) +                                  # size of the dots
+   labs(x = "GDP per cápita",
+        y = "Life Expectancy",
+        title = "Correlation between Life Expectancy and Economic Growth", 
+        subtitle = "Data points are country years",
+        caption = "Source: Gapminder")
+p1
+```
+6. We can also change coordinates and scales. Use *coordflip()* to flip coordinates, use *scale_x_log10* to change the scaling into a logarithmic function
+
+```{r scatter8, warning=FALSE}
+
+p1 <- ggplot(data= gapminder,                              # dataset you want to use
+            mapping = aes(x = gdpPercap, y = lifeExp)) +   # axis
+   geom_point(shape = 15,                                  # Shape of the points, try these numbers 0, 1, 2, 3, 4, 10, 14
+              color = "#012169",                           # color, you can write the color or use a hex number
+              size = 2) +                                  # size of the dots
+   labs(x = "GDP per cápita (log)",
+        y = "Life Expectancy",
+        title = "Correlation between Life Expectancy and Economic Growth", 
+        subtitle = "Data points are country years",
+        caption = "Source: Gapminder") +
+   coord_flip() + scale_x_log10()                          # Flip coordinates and change scale for the x axis
+p1
+```
+6. Lastly, we can change the theme in case we want to change the background and font for a pre-designed set. Play with the options you have. 
+
+```{r scatter9, warning=FALSE}
+
+p1 <- ggplot(data= gapminder,                              # dataset you want to use
+            mapping = aes(x = gdpPercap, y = lifeExp)) +   # axis
+   geom_point(shape = 15,                                  # Shape of the points, try these numbers 0, 1, 2, 3, 4, 10, 14
+              color = "#012169",                           # color, you can write the color or use a hex number
+              size = 2) +                                  # size of the dots
+   labs(x = "GDP per cápita (log)",
+        y = "Life Expectancy",
+        title = "Correlation between Life Expectancy and Economic Growth", 
+        subtitle = "Data points are country years",
+        caption = "Source: Gapminder") +
+   theme_classic()
+p1
+
+# For The Economist we need to install and call a new library
+library(ggthemes)
+p1 <- ggplot(data= gapminder,                              # dataset you want to use
+            mapping = aes(x = gdpPercap, y = lifeExp)) +   # axis
+   geom_point(shape = 15,                                  # Shape of the points, try these numbers 0, 1, 2, 3, 4, 10, 14
+              color = "#012169",                           # color, you can write the color or use a hex number
+              size = 2) +                                  # size of the dots
+   labs(x = "GDP per cápita (log)",
+        y = "Life Expectancy",
+        title = "Correlation between Life Expectancy and Economic Growth", 
+        subtitle = "Data points are country years",
+        caption = "Source: Gapminder") +
+   theme_economist()
+p1
+```
+
+As you see, you can have a lot of control over the graphics you want to present in your papers. Play around with this code changing options and defaults to produce graphs that fit both your aesthetic and your communication goals. There are some additional sources at the end to explore more changes to graphs. I will not go into changes in the facet since it can become complicated. Some code will be given as an example later in case you want to see how it works. We now change our attention to one-variable graphs. You can also save your graph using the ggsave command. Make sure you set your directory (*setwd*) at the start of your R file.
+
+```{r scatter10, warning=FALSE, fig.width = 12, fig.height = 9}
+ggsave(filename = "scatter.png", plot = p1)
+```
+
+### Histograms and density functions
+
+Instead of using *geom_point* you can use other functions to make different graphs. You can make histograms and density plots of a variable. LEt's look at the histogram that shows us the frequency of the data.
+
+```{r hist1, warning=FALSE}
+p2 <- ggplot(data = gapminder,                                   # Data
+             mapping = aes(x = lifeExp)) +                       # Variable for the x axiss
+   geom_histogram()                                              # using geom_histogram to create a histogram
+                                        
+p2  
+```
+
+We can also use *geom_density* for a density plot that is a funtion that envolves the histogram in a continous fashion. 
+
+```{r hist2, warning=FALSE}
+p2 <- ggplot(data = gapminder,                                   # Data
+             mapping = aes(x = lifeExp)) +                       # Variable for the x axiss
+   geom_density(fill = "red",                                    # using geom_density for a density plot 
+                alpha = 0.5)                                     # transparency of the fill                                 
+p2  
+
+p2 <- ggplot(data = gapminder,                                   # Data
+             mapping = aes(x = lifeExp,                          # Variable for the x axiss
+                           fill = continent)) +                  # Groups we want
+   geom_density(alpha = 0.5)                                     # Density plot + transparency of the fill                                 
+p2  
+```
+
+
+### Boxplots
+
+We can also create boxplots which are useful to describe our data. 
+
+```{r boxplot, warning=FALSE}
+ggplot(data=gapminder, 
+       aes(y=lifeExp, x=continent)) + 
+   geom_boxplot(fill="#012169",
+                 color="black", 
+                 size=1.5, 
+                 alpha=.9)
+```
+
+### Lines
+
+Sometimes using lines to connect the dots might be helpful to see some patters in the data.Let's look at the GDP per capita for each country across time in each continent. 
+```{r lines, warning=FALSE}
+p4 <- ggplot(data = gapminder,                                   # Data
+             mapping = aes(x = year, y = gdpPercap)) +           # Variables for the x and y axis
+   geom_line(color="gray70",                                     # using geom_line to add lines   
+             aes(group = country)) +                             # grouping info by country
+    scale_y_log10(labels=scales::dollar) +                       # Transform the GDP with a log function to control for very big income earners
+    facet_wrap(~ continent, ncol = 5) +                          # We want 5 panels one for each continent in 5 columns
+    labs(x = "Year",                                             # Labels
+         y = "GDP per capita",
+         title = "GDP per capita on Five Continents") +
+   theme(axis.text.x = element_text(size = 10, angle = 45))      # Changing the size and angle of the x-axis ticks
+p4
+```
+
+## **Interpreting and Graphing OLS Results**:
+
+Now, we are changing gears a bit to learn how to graph and interpret regression results. We are going to use an old cleaned dataset from the 2016 ANES. We will try to understand some of the determinants of voting. You can find in Sakai a csv file called *lab_Visualization_Data* that we are going to use today. This file contains seven variables and 2762 observations from the 2016 ANES. The variables are as follows: 
+
+  + *Vote*: Indicator variable if the individual casted a vote
+  + *Black*: Indicator variable if the individual self-identified as black
+  + *Hisp*: Indicator variable if the individual self-identified as hispanic
+  + *pid7*: 7-point partisan identification scale
+  + *income*: income category for the respondent
+  + *age*: age of the respondent at the time of the survey
+  + *educ_attain*: Highest educational attainment from the individual at the time of the survey
+  
+For this part of the lab, we will run a linear probability model (LPM). Logit and probit models can also be used to estimate dichotomous variables. However, for ease of interpretation, we will be going with an LPM. If you want to know more about logit and probit models come to OH. 
+
+```{r anes_model}
+# load your data and make it in a data frame format. Always include the extension at the end of the file. 
+# Remember to set your working directory!
+anes <- as.data.frame(read.csv("lab_Visualization_Data.csv"))
+# Run your model
+m1 <- lm(vote ~ black + hisp + pid7 + income + age + educ_attain, data = anes)
+
+```
+
+### Using ggplot
+For most coefplots, we will need to create a placeholder matrix and then use the graphing functions and attributes we have seen. You can also use base R instead of ggplot to produce these kind of graphs. If you are interested in learning how to do this. Let us know and we can go through some code together. This placeholder matrix will be a "small dataset" with the coefficients, standard errors and confidence intervals to graph later. 
+
+```{r coefplot1}
+# Run your model
+out <- summary(m1)                                                                    # Create a placeholder for the summary results
+n <- nrow(out$coefficients)                                                           # Number of coefficients in the model
+# Create a placeholder matrix
+coefMat <- matrix(NA, n-1, 4)
+coefMat[,1] <- out$coefficients[2:n,1]
+coefMat[,2] <- out$coefficients[2:n,2]
+coefMat[,3] <- coefMat[,1] - qnorm(1-0.05/2)*coefMat[,2]
+coefMat[,4] <- coefMat[,1] + qnorm(1-0.05/2)*coefMat[,2]
+rownames(coefMat) <- c("Black", "Hispanic", "Ideology", "Income", "Age", "Education")
+colnames(coefMat) <- c("coef", "std_err", "min", "max")
+df <- as.data.frame(coefMat)
+# Plot
+coefplot <- ggplot(data = df, aes(x = rownames(coefMat),
+                           y = coef)) + 
+   geom_hline(yintercept=0, colour="black", size=1, linetype="dotted") +
+   geom_linerange(aes(ymin=min, ymax=max), size=0.2, color="#0a55fd") + 
+   geom_point(color="#0a55fd") + 
+   labs(x="Coefficient", y="Estimate", title="Coefficient Plot") +  
+   coord_flip() + theme_classic()
+
+coefplot
+```
+
+### Using the canned function coefplot from the arm package
+
+```{r arm, warning=FALSE, echo=FALSE, message=FALSE}
+library(arm) # you will need to install this and the lme4 package
+coefplot(m1,                                         # the model you want to graph
+         intercept = F,                              # if you want to include the intercept
+         main = "Coefficient Plot",                  # Title
+         varnames = c("intercept", "Black", "Hispanic", "Ideology", "Income", "Age", "Education"))
+```
+
+I prefer to use ggplot or basic R since it is easier to customize than coefplot. 
+
+### Some interpretations
+In our model, we are using a dichotomous dependent variable. Thus, the "units" will be know as percentage points which is different to percentages. Also, unless you have a causal framework it is better to talk about correlations and not clear effects. Finally, all interpretations are under the assumption that all the other parts of the model remain constant (ceteris paribus). Let's see the results' summary for our model:
+
+```{r dummy, warning=FALSE, echo=FALSE, message=FALSE}
+out
+```
+
+1. **Effects of dummy variables:**  When interpreting dummy variables it is very important to know what is the **baseline category** (the zero value) of the variable. Since the interpretation will always be with respect to this baseline categories. It is also important to know if the categories are **collectively exhaustive**. Which is a fancy name for coverage of the entire probability space. For instance, a respondent that self-identifies as black will be 0.14 percentage points less prone to vote when compared to non-black respondents. You can also say that being black is associated with a decrease in the probability of voting of 0.14 percentage points when compared to non blacks. If the population or sample is only comprised by black and white people, you could make the baseline categories whites. If there is a larger variation of ethnic groups is better to leave as non-black.  
+
+2. **Effects of continuous variables:** When dealing with continuous variables, it is key you identify the **unit** of the variable, For instance, one more year of life is associated with a 0.001 percentage point increase in the probability of voting. We could also assume income categories are continuous and say that a one unit change in income is associated with a decrease of 0.001 percentage points on the probability of voting. 
+
+3. **Effects of interactions:** You can also have a model with an interaction. This will make interpretation a bit trickier. For this section, let's simplify our model and analyze the probability of voting with respect to being hispanic, the education level of the individual and their interaction. Here, we could hypothesize that richer hispanics will vote more. The model we want to estimate is:
+
+$$ vote_i = \beta_0 +\beta_1hisp_i + \beta_2 income_i + \beta_3 hisp_i\times income_i + \epsilon_i$$
+In this case:
+
+   + the average effect of being hispanic is: $Pr(vote_i | hisp=1) = \beta_0 +\beta_1 + \beta_2 income_i + \beta_3 income + \epsilon_i$.
+   + the average effect of not being hispanic is: $Pr(vote_i | hisp=0) = \beta_0 + \beta_2 income_i + \epsilon_i$
+   + $\beta_1$ is the effect of hispanic at no levels of income (not so telling)
+   + $\beta_2$ is the effect of income for non-hispanics
+   + $\beta_3$ is the interaction effect, it is the marginal effect of being hispanic at each level of income
+
+```{r interaction}
+m2 <- lm(vote ~ hisp*income, data = anes)
+summary(m2)
+```
+
+### Marginal Effect Plots
+We can also do plots to show the effects of interactions. These are usually known as marginal effect plots. For this, we need to create a new placeholder object, but it is a bit more complicated. Notably, because we need to use the results of our models to predict the values of voting and see how they change at different levels of a determined running variable. 
+
+```{r interaction2}
+# First, create the prediction data
+# The prediction data is going to be a a 5X2 matrix for rows equal to the values of the running variable and columns equal to the number of variables in our model. Be super careful about the order of the elements. 
+n <- length(unique(anes$income))
+prediction_data <- data.frame(hisp = rep(1,n),    
+                              income = 0:(n-1))
+# Predict the probability of voting with the results of our model using predict
+predvals <- predict(m2,                                            # model used
+                    type="response",                               # type of response, see ?predict for multiple outputs
+                    se.fit=T,                                      # tell the function you want the standard errors as well
+                    newdata = prediction_data)                     # if using a newdataset for predictions, which data is that 
+
+# Create the standard errors and the values for each level of income and then make them a dataframe
+income <- 0:28
+fit <- predvals$fit
+lowCI <- predvals$fit - qnorm(1-0.05/2)*predvals$se.fit
+highCI <- predvals$fit + qnorm(1-0.05/2)*predvals$se.fit
+effects <- as.data.frame(cbind(income, fit, lowCI, highCI))
+
+# Plot
+margplot <- ggplot(data = effects, aes(x = income,
+                                       y = fit)) + 
+   geom_line() +
+   geom_ribbon(aes(ymin = lowCI, ymax = highCI), alpha = .1) + 
+   labs(x = "Income",
+        y = "Probability of Voting",
+        title = "Correlation between Income for Hispanic Respondents", 
+        caption = "Source: ANES, 2016") +
+   theme_classic()
+
+margplot
+
+```
+
+There are also some canned functions we could use to calculate the marginal effects. One of them is the *ggeffects* package. Let's see how it works.
+
+``` {r margplot3}
+# You will need to install and then load the ggeffects package
+library(ggeffects)
+# Create an object holder for the predictions
+effects <- ggpredict(m2,                                            # model
+                     terms = c("income", "hisp"))                   # variables you want to graph
+p5 <- ggplot(effects, aes(x = x, y = predicted, color = group)) + 
+   geom_line() + 
+   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1) + 
+   scale_color_manual(labels = c("Non Hispanic", "Hispanic"), values = c("blue", "red")) +
+      labs(x = "Income",
+        y = "Probabilitty of Voting",
+        title = "Correlation between Income for Hispanic Respondents", 
+        caption = "Source: ANES, 2016") +
+   theme_classic()
+p5
+```
+
+## **The functions we used today**
+   
+   + ggplot()
+      + geom_line()
+      + geom_point()
+      + geom_ribbon()
+      + labs()
+      + theme()
+   + geom_density()
+   + geom_histogram()
+   + predict()
+   + coefplot()
+   + ggeffects()
+
+## **Some additional resources**
+1. There is a whole art behind visualization and making graphs in R. Here are some links that might be useful when producing different visualizations of your data. 
+   + I found the Computational Social Science webpages from [Tiago Ventura](https://tiagoventura.rbind.io/teaching/), [Yae Jeon Kim](https://jaeyk.github.io/PS239T/) and Summer Institute of Computational Social Science [(SICSS)](https://sicss.io/boot_camp) useful for the elaboration of this lab. Some of the examples are the same and others are inspired on them.  
+   + I also highly recommend Kieran Healy's [book](https://socviz.co/index.html#preface) on Data Visualization using ggplot.
+   + There is also a ggplot [cheat sheet](https://github.com/rstudio/cheatsheets/blob/master/data-visualization-2.1.pdf) that is always handy. 
+   + Here are some ggplot visualization [examples](http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html)
+

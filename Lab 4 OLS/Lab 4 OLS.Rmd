@@ -1,0 +1,404 @@
+---
+title: "RBSI Lab 4"
+author: "Mateo Villamizar Chaparro"
+date: "May 9th, 2022"
+output: 
+  html_document: 
+    toc: true
+    toc_float: TRUE
+    toc_collapsed: FALSE
+    number_sections: FALSE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+library(dplyr)
+library(tidyr)
+library(haven)
+library(stargazer)
+```
+
+## **Procedural stuff**
+
+Please sign-up for the slots to talk with the TAs next week [here](https://docs.google.com/spreadsheets/d/1rgEUR5bV5WN4UTqgs0QREOrW-DDugnKgPcniL9PvS5g/edit?usp=sharing).
+
+## **The Goal of the lab**
+
+The goal for today is to use **ordinary least squares (OLS)** to analyze how the access to governmental programs and race affects both participation and vote choice in Brazilian elections. We will be using data from the Latin American Public Opinion Project (LAPOP) to analyze these questions. The dataset has been uploaded to our sakai site and comes from the replication materials of de Michelli (2018) [The Racialized Effects of Social Programs in Brazil](https://www.cambridge.org/core/journals/latin-american-politics-and-society/article/racialized-effects-of-social-programs-in-brazil/D49933D016E3ADC008FD7E8FA2EE7487) published in the Latin American Politics and Society journal.
+
+## **Dependent and Independent variables**
+You are pros at this already, but let's identify:
+  
+  + What is the unit of analysis?
+  + Which would be the independent and dependent variables of this research question. 
+  + What would you say is the theory behind their relationship?
+
+
+## **Now lets set the workspace**
+Let's load the dataset and call it brazil
+```{r data_wd, include=FALSE}
+# First, let's set a working directory
+setwd("C:/Users/Mateo Chaparro/Dropbox/Documentos/0_Duke/5_FifthYear/Summer 2022/RBSI/Labs/Lab 4 OLS")
+
+#Let's load the data
+brazil<- read_stata("BRA_LAPOP.dta")
+
+# datachanges
+brazil <- brazil %>% mutate(bf = ifelse(bf==1, "Recipient", "Non-Recipient"),
+                            race2 = ifelse(race2==1, "Afro-Brazilian", "Other"),
+                            vote1b = ifelse(vote1b==1, "Incumbent", "Opposition"),
+                            vote2b = ifelse(vote2b==1, "Incumbent", "Opposition"),
+                            pt = ifelse(partyid==2, 1, 0),
+                            region = ifelse(region==1, "North", 
+                                            ifelse(region==2, "Northeast", 
+                                                   ifelse(region==3, "Sountheast", 
+                                                          ifelse(region==4, "South", "Midwest")))))
+brazil <- select(brazil,-c("age2"))
+# Exporting the dataset
+write.csv(brazil,"BRA_LAPOP.csv", row.names = FALSE)
+
+#Let's load the data
+brazil<- read.csv("BRA_LAPOP.csv")
+
+```
+
+```{r x, eval=FALSE}
+# First, let's set a working directory
+setwd("___")
+# Tip: if you are a windows user you might need to change the \ in your paths to /
+# Tip: always make sure that you use / for paths, if not R won't recognize it.
+
+#Let's load the data. What format is it on?
+brazil<- _____("___.csv")
+```
+
+## **Let's make some changes to the dataset**
+The codebook for the dataset is as follows:
+
+  + **bf**: "Recipient" of the conditional cash transfer or "Non-recipient"
+  + **race2**: "Adro-Brazilian" vs "Others"
+  + **income**: Income earned in the last month. Categorical variable with 7 categories. The larger the number the larger the income
+  + **educ**: Highest level of education. 1. Less than primary 2. Primary 3. Secondary 4. High school 5. More than high school
+  + **female**: Dichotomous variable 1. female and 0. non-female
+  + **age**: Age of the respondent at the time of the survey
+  + **partyid**: Party self-identification. 1. Non-Partisan 2. Pt 3. PMDB 4. PSDB 5. Other
+  + **vote1a**: Did the respondent participate in the first round of presidential elections? 1. Yes 0. No
+  + **vote2a**: Did the respondent participate in the runoff presidential elections? 1. Yes 0. No
+  + **vote1b**: Vote-choice in the first round 1. Incumbent 0. Opposition
+  + **vote1a**: Vote-choice in the runoff 1. Incumbent 0. Opposition
+  + **pt**: the responder is member of PT
+
+### Creating and Recoding variables
+
+First let's create a dummy variable for being a recipient of the government program Bolsa Familia  
+```{r var_change, include=FALSE}
+
+# Way 1: Using dplyr
+# mutate(varname = condition or value)
+# ifelse(condition, value_if_true, value_if_false)
+brazil <- brazil %>% mutate(bf1 = ifelse(bf=="Recipient", 1,0))
+
+# Way 2: base R
+# dataframe$varname <- condition
+brazil$bf2 <- ifelse(brazil$bf=="Recipient", 1, 0)
+
+# Do they do the same thing? Let's check. What should be the answer? of this command?
+sum(brazil$bf1==brazil$bf2)
+
+# Tip: is always better work with numbers than strings
+
+# Now let's transform the race, vote1a, vote2a, and high school or more dummies. We can do all of them using the same command
+brazil <- brazil %>% mutate(race2 = ifelse(race2 == "Afro-Brazilian",1,0),
+                            vote1b = ifelse(vote1b=="Incumbent", 1,0),
+                            vote2b = ifelse(vote2b=="Incumbent", 1,0),
+                            hs = ifelse(educ >= 4, 1, 0))
+
+# Tip: ifelse statements could use other logical simbols like ==, >, >=, <, <=, !=. It can also combine conditions using & (and) or | (or)
+
+# Harder: transform the partyid variable from a numeric to a string categorical variable
+brazil <- brazil %>% mutate(partyid = ifelse(partyid==1, "Non-Partisan", 
+                                            ifelse(partyid==2, "PT", 
+                                                   ifelse(partyid==3, "PMDB", 
+                                                          ifelse(partyid==4, "PSDB", "Other")))))
+
+# Harder create a variable that identifies respondents who have a at least a high school degree and are Afro-Brazilian. Call this new variable schooled_afro. How many individuals fit this category?
+brazil <- brazil %>% mutate(schooled_Afro = ifelse(hs==1 & race2==1, 1, 0))
+safro <- sum(brazil$schooled_Afro, na.rm = TRUE)
+```
+
+```{r var_change1, eval=FALSE}
+# Way 1: Using dplyr
+# mutate(varname = condition or value)
+# ifelse(condition, value_if_true, value_if_false)
+brazil <- brazil %>% mutate(bf1 = ifelse(bf=="Recipient", 1,0))
+
+# Way 2: base R
+# dataframe$varname <- condition
+brazil$bf2 <- ifelse(brazil$bf=="Recipient", 1, 0)
+
+# Do they do the same thing? Let's check. What should be the answer? of this command?
+sum(brazil$bf1 __ brazil$bf2)
+
+# Tip: is always better work with numbers than strings
+
+# Now let's transform the race, vote1b, vote2b, and high school dummies. We can do all of them using the same command
+brazil <- brazil %>% mutate(race2 = ifelse(race2 == "Afro-Brazilian",1,0),
+                            vote1b = ifelse(vote1b=="Incumbent", 1,0),
+                            vote2b = ifelse(vote2b == "Incumbent", 1,0),
+                            hs = ifelse(educ>=4,1,0))
+
+# Tip: ifelse statements could use other logical simbols like ==, >, >=, <, <=, !=. It can also combine conditions using & (and) or | (or)
+
+# Harder: transform the partyid variable from a numeric to a string categorical variable
+brazil <- brazil %>% mutate(partyid = ifelse(partyid==1, "Non-Partisan", 
+                                            ifelse(partyid==2, "PT", 
+                                                   ifelse(partyid==3, "PMDB", 
+                                                          ifelse(partyid==4, "PSDB", "Other")))))
+
+# Harder create a variable that identifies respondents who have a at least a high school degree and are Afro-Brazilian. Call this new variable schooled_afro. How many individuals fit this category?
+brazil <- brazil %>% mutate(schooled_Afro = ifelse(race2 == 1 & hs == 1, 1, 0))
+sum(brazil$schooled_Afro, na.rm = TRUE) # na.rm = TRUE means we're removing the NAs from the calculation
+```
+
+The total number of educated Afro-Brazilians is `r safro`
+
+
+## **Ordinary Least Squares**
+
+### What is a linear regression?
+In very simple terms a regression is an statistical tool that models the relationship between two or more variables. In this case is linear because it will try to fit the best line that minimizes the sum of the square errors. Prof. Siegel will explain this in much more detail during the following classes. But, let's see visually what this means.
+
+```{r reg, echo=FALSE}
+x <- rnorm(1000, 10, 1)
+y <- rnorm(1000, 1, 0.3)
+
+plot(x=x, y=y, main = "No Relationship", xlab = "Independent Variable", ylab = "Dependent Variable")
+abline(lm(y~x), col="green", lwd =3)
+
+x <- rnorm(1000, 10, 1)
+y <- rnorm(1000, 1, 0.3) + 3*x
+
+plot(x=x, y=y, main = "Positive Relationship", xlab = "Independent Variable", ylab = "Dependent Variable")
+abline(lm(y~x), col="green", lwd =2)
+
+x <- rnorm(1000, 10, 1)
+y <- rnorm(1000, 1, 0.3) - 0.5*x
+
+plot(x=x, y=y, main = "NEgative Relationship", xlab = "Independent Variable", ylab = "Dependent Variable")
+abline(lm(y~x), col="green", lwd =3)
+```
+
+Always watch out for **outliers**. Linear regressions are very sensitive to outliers. Which are observations that are very abnormal in the dataset. Let's see how the an outlier in our first plot changes the regression line. Let's add the point (15, 0) to our data. 
+```{r outlier, echo=FALSE, warning=FALSE}
+x <- rnorm(1000, 10, 1)
+y <- rnorm(1000, 1, 0.3)
+x <- rbind(x, 15)
+y <- rbind(y, 0)
+
+plot(x=x, y=y, main = "Looking at Outliers", xlab = "Independent Variable", ylab = "Dependent Variable")
+points(15, 0, col = "blue", pch = 19)
+abline(lm(y~x), col="green", lwd =3)
+```
+
+The **number of observations** also matter a lot. Let's see how:
+
+```{r n_obs, echo=FALSE, warning=FALSE}
+
+par(mfrow=c(2,2))
+x <- c(3, 10)
+y <- c(1.5, 4.8)
+plot(x=x, y=y, main = "Looking at Outliers", xlab = "Independent Variable", ylab = "Dependent Variable")
+abline(lm(y~x), col="green", lwd =3)
+points(3, 1.5, col = "blue", pch = 19)
+points(10, 4.8, col = "blue", pch = 19)
+
+x <- c(3, 10, 5, 7)
+y <- c(1.5, 4.8, 5, 3.2)
+plot(x=x, y=y, main = "Looking at Outliers", xlab = "Independent Variable", ylab = "Dependent Variable")
+abline(lm(y~x), col="green", lwd =3)
+points(3, 1.5, col = "blue", pch = 19)
+points(10, 4.8, col = "blue", pch = 19)
+
+x <- c(3, 10, 5, 7, 9, 6, 5, 5, 6)
+y <- c(1.5, 4.8, 5, 3.2, 1, 2, 2.2, 2.4, 3)
+plot(x=x, y=y, main = "Looking at Outliers", xlab = "Independent Variable", ylab = "Dependent Variable")
+abline(lm(y~x), col="green", lwd =3)
+points(3, 1.5, col = "blue", pch = 19)
+points(10, 4.8, col = "blue", pch = 19)
+
+x <- c(3, 10, 5, 7, 9, 6, 5, 5, 6, 5, 6, 3, 4, 7, 3, 8, 1, 6, 5, 4, 6, 5, 4, 6, 6)
+y <- c(1.5, 4.8, 5, 3.2, 1, 2, 2.2, 2.4, 3, 2.2, 2.5, 2.7, 3, 2.9, 3.1, 3, 2.9, 3.9, 2.2, 2.1, 2.5, 2.8, 3.4, 3.3, 2.6)
+plot(x=x, y=y, main = "Looking at Outliers", xlab = "Independent Variable", ylab = "Dependent Variable")
+abline(lm(y~x), col="green", lwd =3)
+points(3, 1.5, col = "blue", pch = 19)
+points(10, 4.8, col = "blue", pch = 19)
+
+```
+
+Conclusion: the more data you have the more stable would be your results. Furthermore, always produce a scatter of your main variables to check for outliers and visual expectations of the correlation. 
+
+### How to use `lm` for calculating linear models
+Let's go back to our Brazilian example. To calculate an OLS regression we will use the`lm` command. I'll leave to your future TAs to explain how to do this "by hand" when you start your methods sequence at your PhD!!
+
+The command has the following basic structure: lm(formula, data). There are more arguments but we don't need to go very deep into them. The `formula` will capture your regression formula and the `data` the dataset you will be using.
+
+#### The `lm` command
+Let's first try to answer if race has an influence on income. We will be assuming here that our income variable is continuous. Formally:
+
+$$ income_i = \beta_0 +\beta_1race_i + \epsilon_i$$
+
+```{r lm, include=TRUE}
+# Let's calculate the model. Remember lm(formula, data)
+model1 <- lm(formula = income ~ race2, data = brazil)
+
+# Look that now you have a new object in your environment called model 1. This object stores a lot of useful information about your model. We will focus right now in the coefficients. 
+
+# Let's see the results and try to understand what they mean
+summary(model1)
+
+# You first are interested in the magnitude and direction of your coefficients. Your coefficients are estimates of the line's slope and are the same as the correlation between your variables (in the univariate world). Positive coefficients mean positive correlations. Negative coefficients mean negative correlations. 
+
+# We can get a vector of coefficients (or betas) using the coefficient formula
+coefficients(model1)
+# or extracting the data from our summary table
+summary(model1)$coefficients[, 1]
+
+# Given that our data is just a sample of the population, we don't know what the real parameter for our slope (correlation) actually is. As a result, we must have some uncertainty around our estimate. This uncertainty can be calculated using the standard error. In fact, we can construct our confidence intervals using this information.
+# We can do this manually
+summary(model1)$coefficients[, 1]+1.96*summary(model1)$coefficients[, 2]
+summary(model1)$coefficients[, 1]-1.96*summary(model1)$coefficients[, 2]
+
+# or using the confint command
+confint(model1)
+```
+
+According to the results being Afro-Brazilian is associated with a decrease of `r round(coefficients(model1), 2)[[2]]` points of income. More substantially, there is statistical support to the idea that black Brazilians earn less than their non-Black counterparts. 
+
+#### An aside on t-tests
+T-tests are inferential statistical tests that test the statistical significance of a sample estimate. It is usually used to test difference in means. For the linear regressions we usually use a two-tailed test to evaluate if our coefficients are different from zero. We formally test the following hypotheses:
+
+$$ H_o: \beta_i = 0$$
+$$ H_a: \beta_i \neq 0$$
+Formally the test calculates an estimate from a t-distribution (t-value) and this is the value reported in the model summary. When you have more than 30 observations, values lower than $-3$ and larger than $3$ will be significant. The **p-value** is the probability of finding and observation that is more extreme than the t-estimate. Values closer to zero are best. What does this mean in "plain English"?
+
+#### Does race and access to governmental programs affect participation in elections?
+What are the effects of race and access to the government program of Bolsa Familia (bf) into voting in the first round of elections.
+
+```{r lm2, include=FALSE}
+# Calculate this bivariate relationship and call it model 2
+model2 <- lm(vote1a ~ race2 + bf1, data=brazil)
+summary(model2)
+
+# What are the confidence intervals for model 2
+confint(model2)
+
+# Let's add income and pt as control variables and call it model 3
+model3 <- lm(vote1a ~ race2 + bf1 + pt + income, data=brazil)
+summary(model3)
+
+# What is the coefficient for bf1 in model2
+coefficients(model2)[2]
+
+# Let's also calculate a model just with the intercept and call it model5
+model4 <- lm(vote1a ~ 1, data=brazil)
+summary(model4)
+```
+
+```{r lm2_stude, eval=FALSE}
+# Calculate this bivariate relationship and call it model 2
+model2 <- lm(formula = vote1a ~ race2 + bf1, data=brazil)
+# call the summary of model2
+summary(model2)
+
+# What are the confidence intervals for model 2
+confint(model2)
+
+# Let's add income and pt as control variables and call it model 3
+model3 <- lm(vote1a ~ race2 + bf1 + pt + income, data=brazil)
+# call the summary of model3
+summary(model3)
+
+# What is the coefficient for bf1 in model3
+_____(model3)[_]
+
+# Let's also calculate a model just with the intercept and call it model4
+model4 <- lm(vote1a ~ 1, data=brazil)
+summary(model4)
+```
+
+#### Non-mandatory homework
+Do access to governmental programs and race affect voting for the incumbent on the runoff elections?
+```{r lm3, echo=FALSE}
+model5 <- lm(vote2b ~ race2 + bf1 + pt + income, data=brazil)
+summary(model5)$coefficients[,1:3]
+```
+
+
+## **Goodness of Fit and `stargazer`**
+This last section will focus on how to compare across models and how to export this output using `stargazer`. Let's first understand how stargazer works. I found this stargazer [webpage](https://www.jakeruss.com/cheatsheets/stargazer/#omit-parts-of-the-default-output) very useful.
+
+We calculated three models in the last section. How to know which one is the best? There are two main ways to do so. First, is comparing the **F-tests**. This F-test compares the goodness of fit for models with covariates vs a model with just the intercept. It formally tests if all the coefficients are different from zero or not. In plain English it shows if adding covariates help the fit of the model.:
+
+$$ H_o: \beta_i = \beta_j = \beta_k = ... = 0$$
+$$ H_a:\beta_i \neq \beta_j \neq \beta_k = ... \neq 0$$
+```{r star, echo=TRUE}
+# stargazer(model1, model2, type = "type)
+# The types could be text, hetml or latex
+stargazer(model4, model2, model3, type="text")
+```
+
+According to our table, both columns 2 and 3 have a statistically significant F-test which means we fail to reject the null hypothesis indicating all the covariete coefficients are equal to zero. In other words, adding the independent variables help explain the variation in participation. But, how to compare these two columns?
+
+To answer this question we need to compare the $R^2$ which is the percentage of the dependent variable's variance explained by the model. In this case, column three the model with the controls explains 0.4% of the total variance in our dependent variable. That is not much!!! 
+
+**Pro-question**: Why is our number of observations changing on each model?
+
+```{r star2}
+# You can also use stargazer to calculate descriptive statistic
+# stargazer(data)
+stargazer(brazil, type="text")
+
+# you can change the styles of the tables
+stargazer(model4, model2, model3, type="text", style="ajps")
+
+# you can add titles and put more understandable names to the variables
+stargazer(model4, model2, model3, type="text",
+          title            = "Results Table 1",
+          covariate.labels = c("Afro-Brazilian", "Bolsa Familia Recipient", "Partisan of PT",
+                               "Income"),
+          dep.var.caption  = "OLS Models",
+          dep.var.labels   = "Voted in the First Round of elections")
+
+# You can also omit some of the statistics
+stargazer(model4, model2, model3, type="text",
+          title            = "Results Table 1",
+          covariate.labels = c("Afro-Brazilian", "Bolsa Familia Recipient", "Partisan of PT",
+                               "Income"),
+          dep.var.caption  = "OLS Models",
+          dep.var.labels   = "Voted in the First Round of elections",
+          omit.stat = c("f"))
+
+# You can choose which variables to present, add info and export
+stargazer(model4, model2, model3, type="text",
+          title            = "Results Table 1",
+          covariate.labels = c("Afro-Brazilian", "Bolsa Familia Recipient", "Partisan of PT",
+                               "Income"),
+          dep.var.caption  = "OLS Models",
+          dep.var.labels   = "Voted in the First Round of elections",
+          omit.stat = c("f"),
+          add.lines = list(c("Comtrols", "No", "No", "Yes")),
+          keep = c("race2","bf1"),
+          out="table1.doc") # for nicer looking exported tables change text for html in type
+
+```
+## **Functions used in this lab**
+The functions we used today are:
+
+  + `lm`
+  + `ifelse`
+  + `mutate`
+  + `stargazer`
+  + `summary`
+  + `coefficients`
+  + `confint`
