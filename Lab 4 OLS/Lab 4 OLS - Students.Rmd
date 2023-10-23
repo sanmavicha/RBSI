@@ -1,7 +1,7 @@
 ---
 title: "RBSI Lab 4"
 author: "Mateo Villamizar Chaparro"
-date: "May 9th, 2022"
+date: "June 8th, 2023"
 output: 
   html_document: 
     toc: true
@@ -18,10 +18,6 @@ library(tidyr)
 library(haven)
 library(stargazer)
 ```
-
-## **Procedural stuff**
-
-Please sign-up for the slots to talk with the TAs next week [here](https://docs.google.com/spreadsheets/d/1rgEUR5bV5WN4UTqgs0QREOrW-DDugnKgPcniL9PvS5g/edit?usp=sharing). 
 
 ## **The Goal of the lab**
 
@@ -57,11 +53,11 @@ The codebook for the dataset is as follows:
   + **female**: Dichotomous variable 1. female and 0. non-female
   + **age**: Age of the respondent at the time of the survey
   + **partyid**: Party self-identification. 1. Non-Partisan 2. Pt 3. PMDB 4. PSDB 5. Other
-  + **vote1a**: Did the respondent participate in the first round of presidential elections? 1. Yes 0. No
-  + **vote2a**: Did the respondent participate in the runoff presidential elections? 1. Yes 0. No
-  + **vote1b**: Vote-choice in the first round 1. Incumbent 0. Opposition
-  + **vote1a**: Vote-choice in the runoff 1. Incumbent 0. Opposition
-  + **pt**: the responder is member of PT
+  + **turnout1a**: Did the respondent vote in the first round of presidential elections? 1. Yes 0. No
+  + **turnout2a**: Did the respondent vote in the runoff presidential elections? 1. Yes 0. No
+  + **vote1b**: Vote-choice in the first round Incumbent or Opposition
+  + **vote2b**: Vote-choice in the runoff Incumbent or Opposition
+  + **pt**: the respondtr is member of PT
 
 ### Creating and Recoding variables
 
@@ -81,23 +77,29 @@ sum(brazil$bf1 __ brazil$bf2)
 
 # Tip: is always better work with numbers than strings
 
-# Now let's transform the race, vote1a, vote2a, and high school dummies. We can do all of them using the same command
-brazil <- brazil %>% ______(race2 = _____(race2 ___ "Afro-Brazilian",__,__),
-                            vote1a = _____(vote1a=="_____", __,0),
-                            vote2a = _____(____ == _____, ___,___),
-                            _____ = _____(_______________________))
+# Now let's create indicator variables for race, vote1b, vote2b, and high school or more. We can do all of them using the same command
+brazil <- brazil %>% ______(race2_rec = _____(race2 ___ "Afro-Brazilian",__,__),
+                            vote1b_rec = _____(vote1b=="_____", __,0),
+                            vote2b_rec = _____(____ == _____, ___,___),
+                            hs = _____(_______________________))
 
 # Tip: ifelse statements could use other logical simbols like ==, >, >=, <, <=, !=. It can also combine conditions using & (and) or | (or)
 
+# Let's check if we transformed the variables correctly
+table(brazil$race2, brazil$race2_rec)
+table(brazil$vote1b, brazil$vote1b_rec)
+table(brazil$vote2b, brazil$vote2b_rec)
+table(brazil$educ, brazil$hs)
+
 # Harder: transform the partyid variable from a numeric to a string categorical variable
-brazil <- brazil %>% mutate(partyid = ifelse(partyid==_____, "Non-Partisan", 
+brazil <- brazil %>% mutate(partyid = ifelse(partyid_rec==_____, "Non-Partisan", 
                                             ifelse(partyid==____, "PT", 
                                                    ifelse(_____==____, _____, 
                                                           ______(_____==____, "PSDB", ______)))))
 
 # Harder create a variable that identifies respondents who have a at least a high school degree and are Afro-Brazilian. Call this new variable schooled_afro. How many individuals fit this category?
 brazil <- brazil %>% mutate(schooled_Afro = ifelse(______ & _______, 1, 0))
-sum(brazil$_________, na.rm = TRUE) # na.rm = TRUE means we're removing the NAs from the calculation
+safro <- sum(brazil$_________, na.rm = TRUE) # na.rm = TRUE means we're removing the NAs from the calculation
 ```
 
 The total number of educated Afro-Brazilians is `r safro`
@@ -191,7 +193,7 @@ $$ income_i = \beta_0 +\beta_1race_i + \epsilon_i$$
 # Let's calculate the model. Remember lm(formula, data)
 model1 <- lm(formula = income ~ race2, data = brazil)
 
-# Look that now you have a new object in your environment called model 1. This object stores a lot of useful information about your model. We will focus right now in the coefficients. 
+# Look that now you have a new object in your environment called model1. This object stores a lot of useful information about your model. We will focus right now in the coefficients. 
 
 # Let's see the results and try to understand what they mean
 summary(model1)
@@ -222,18 +224,18 @@ $$ H_a: \beta_i \neq 0$$
 Formally the test calculates an estimate from a t-distribution (t-value) and this is the value reported in the model summary. When you have more than 30 observations, values lower than $-3$ and larger than $3$ will be significant. The **p-value** is the probability of finding and observation that is more extreme than the t-estimate. Values closer to zero are best. What does this mean in "plain English"?
 
 #### Does race and access to governmental programs affect participation in elections?
-What are the effects of race and access to the government program of Bolsa Familia (bf) into voting in the first round of elections.
+What are the effects of race and access to the government program of Bolsa Familia (bf) into voting in the first round of elections (turnout1a).
 
 ```{r lm2_stude, eval=FALSE}
-# Calculate this bivariate relationship and call it model 2
-model2 <- ______(______ ~ race2 + bf1, data=______)
+# Calculate this bivariate relationship and call it model2
+model2 <- ______(______ ~ race2_rec + bf1, data=______)
 # call the summary of model2
 _______(model2)
 
 # What are the confidence intervals for model 2
 _______(model2)
 
-# Let's add income and pt as control variables and call it model 3
+# Let's add income and pt as control variables and call it model3
 model3 <- ______(______ ~ ____ + _____ + ______ + ___, data=______)
 # call the summary of model3
 ________(model3)
@@ -247,7 +249,11 @@ ________(model5)
 ```
 
 #### Non-mandatory homework
-Do access to governmental programs and race affect voting for the incumbent on the runoff elections?
+Do access to governmental programs and race (race2_rec) affect voting for the incumbent on the runoff elections?
+
+```{r lm3, echo=FALSE, eval=FALSE}
+model5 <- lm(____ ~ _____ + bf1 + pt + income, data=brazil)
+```
 
 ## **Goodness of Fit and `stargazer`**
 This last section will focus on how to compare across models and how to export this output using `stargazer`. Let's first understand how stargazer works. I found this stargazer [webpage](https://www.jakeruss.com/cheatsheets/stargazer/#omit-parts-of-the-default-output) very useful.
@@ -315,3 +321,7 @@ The functions we used today are:
   + `summary`
   + `coefficients`
   + `confint`
+  
+## **Additional resources**
+
+  + Here is a [nice tutorial](https://cran.r-project.org/web/packages/rio/vignettes/rio.html) for importing and exporting a wide array of files into R.
