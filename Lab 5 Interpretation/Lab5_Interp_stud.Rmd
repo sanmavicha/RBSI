@@ -1,7 +1,7 @@
 ---
 title: "**RBSI OLS and Interpretation Lab**"
 author: "Mateo Villamizar-Chaparro (sv161@duke.edu)"
-date: "June 2022"
+date: "June 2023"
 output: 
   html_document: 
     toc: true
@@ -22,7 +22,7 @@ library(ggeffects)
 
 ## **The Goal of the lab**
 
-The goal for today is to keep learning how to use **ordinary least squares (OLS)** to analyze the relationship between variables. For this lab we are going to use a version of the 2016 ANES. A lot of you will be using this dataset for your projects so this might be helpful. In particular, we are trying to understand how participation is both driven by income. You can find in Sakai a csv file called *lab_Visualization_Data* that we are going to use today. This file contains seven variables and 2762 observations from the 2016 ANES. The variables are as follows: 
+The goal for today is to keep learning how to use **ordinary least squares (OLS)** to analyze the relationship between variables. For this lab we are going to use a version of the 2016 ANES. A lot of you will be using this dataset for your projects so this might be helpful. In particular, we are trying to understand how participation is driven by income. You can find in Sakai a csv file called *ANES_2016* that we are going to use today. This file contains seven variables and 2762 observations from the 2016 ANES. The variables are as follows: 
 
   + *Vote*: Indicator variable if the individual casted a vote
   + *Black*: Indicator variable if the individual self-identified as black
@@ -45,26 +45,26 @@ For today's aim identify:
 
 ### Remembering some of last lab's commands
 
-Load your data and call it `anes`. After that, create a new object called `subset_anes` that contains the variables vote, Hispanic, and educational attainment. With the `subset_anes` data create a new variable called educ_hisp that is equal to one if the individual is Hispanic and has at least a 4 in their educational attainment variable. Calculate the mean and the median of this variable. 
+Load your data and call it `anes`. After that, create a new object called `subset_anes` that contains the variables vote, Hispanic, and educational attainment. With the `subset_anes` data create a new variable called educ_hisp that is equal to one if the individual is Hispanic and has at least a 4 in their educational attainment variable. Calculate the mean and the median of this variable. Finally, use stargazer to calculate the descriptive statistics of the ANES data.  
 
 ```{r anes_model_st, eval=FALSE}
 # Remember to set your working directory!
-setwd(_______)
+setwd("_________")
 
 # load your data and make it in a data frame format. Always include the extension at the end of the file. 
-anes <- as.data.frame(_____("lab_Interpretation_Data.____"))
+anes <- as.data.frame(_______("_______"))
 
 # create subset_anes
-vars <- c("___", "____", "educ_attain")
-sub_anes <- anes[vars]
+vars <- c("____", "_____", "______")
+sub_anes <- _____[____]
 
-# Create the new variable
-sub_anes <- _____ %>% mutate(edu_black = _____(hisp==1 _ ______,_,_))
+# Create the new variable educated hispanics educated means educ_attain=>4
+sub_anes <- sub_anes %>% mutate(edu_hisp = ifelse(________,1,0))
 
 # Calculate mean and median
-mean_edu_hisp <- _____(____$edu_black)
+mean_edu_hisp <- mean(sub_anes$edu_hisp)
 
-med_edu_hisp <- _______(___________)
+med_edu_hisp <- median(sub_anes$edu_hisp)
 
 ```
 What are the substantive meaning of these numbers?
@@ -73,34 +73,100 @@ Mean: `r round(mean_edu_hisp,3)`
 
 Median: `r med_edu_hisp`
 
+### Using `stargazer` I: Summary statistics
+Stargazer is a really powerful command that can create tables, that you can then export to your papers. It is very useful that you can define a lot of the table settings. Let's see how we can use this to display a summary statistics table.
+
+```{r star1, include=TRUE, eval=TRUE}
+# stargazer(dataset, options)
+stargazer(anes, type="text")
+# What if we don¿t want to add the median?
+stargazer(anes, type="text", median = TRUE)
+# You can play with some of the other values in order for the to appear or not in the table: nobs, mean.sd, iqr, etc
+# You can also display the statistics you want using a list object but the names are different
+stargazer(anes, type="text", summary.stat = c("n", "min", "mean", "max", "sd")) # order matters here
+
+# You can also change the names of the covariates to more descriptive ones (order matters here too!!)
+stargazer(anes, type="text", summary.stat = c("n", "min", "mean", "max", "sd"),
+           covariate.labels=c("Voted 2016 election","Respondent is Black","Respondent is Hispanic", "PArty Identification", "Income", "Age", "Educational attainment"))
+
+# What about adding a name and making the number of digits after zero smaller?
+stargazer(anes, type="text", summary.stat = c("n", "min", "mean", "max", "sd"),
+           covariate.labels=c("Voted 2016 election","Respondent is Black","Respondent is Hispanic", "PArty Identification", "Income", "Age", "Educational attainment"),
+          title="Descriptive statistics/selected variables", 
+          digits=2)
+
+# Finally, how can you export it
+stargazer(anes, type="text", summary.stat = c("n", "min", "mean", "max", "sd"),
+           covariate.labels=c("Voted 2016 election","Respondent is Black","Respondent is Hispanic", "PArty Identification", "Income", "Age", "Educational attainment"),
+          title="Descriptive statistics/selected variables", 
+          digits=2,
+          out="desc_stats.doc")
+```
 
 ### Interpretations
 
 In our model, we are using a dichotomous dependent variable. Thus, the "units" will be know as **percentage points** which is different to percentages. Also, unless you have a causal framework it is better to talk about correlations and not clear effects. Finally, all interpretations are under the assumption that all the other parts of the model remain constant (ceteris paribus).
 
-For this part of the lab, we will run a **linear probability model (LPM)**. Logit and probit models can also be used to estimate dichotomous variables. However, for ease of interpretation, we will be going with an LPM. If you want to know more about logit and probit models send Gloria or me an email/slack message. 
+For this part of the lab, we will run a **linear probability model (LPM)**. Logit and probit models can also be used to estimate dichotomous variables. However, for ease of interpretation, we will be going with an LPM. If you want to know more about logit and probit models send Gloria or me an email message. 
 
 Run a first model that shows the correlation between voting and being Black and Hispanic. Then run another model that includes partisan identification, income, age and educational attainment as controls. Create a stargazer table for both models where only the racial categories appear. 
 
-```{r models_st, warning=FALSE, echo=TRUE, message=FALSE, eval=FALSE}
+
+```{r models_st, warning=FALSE, echo=TRUE, message=FALSE, eval=FALSE, include=TRUE}
 # Run your first model
 m1 <- ___(vote ~ __ + ____, _____ = anes)
 
 # Run your second model
 m2 <- ___(____________________________________, _______ = anes)
-
-# Table
-stargazer(_____, ______, type="text",
-          title            = "_________",                        # Give a title to the table 
-          covariate.labels = c("Black", "Hispanic"),             # Choose the labels for the variables you want to show  
-          dep.var.caption  = "OLS Models",                       # Name your columns
-          dep.var.labels   = "Voted",                            # Name your dependent variable
-          add.lines = list(c("________", "No", "Yes")),          # add lines of info
-          keep = c("_____","____"),                              # keep certain variables  
-          out="table1.doc")                                      # for nicer looking exported tables change text for html in type
 ```
 
 What model would you choose to present and why?
+
+### An aside using `stargazer` II: Regression tables and choosing between models
+
+This last section will focus on how to compare across models and how to export this output using `stargazer`. Let's first understand how stargazer works. I found this stargazer [webpage](https://www.jakeruss.com/cheatsheets/stargazer/#omit-parts-of-the-default-output) very useful.
+
+```{r start2, warning=FALSE, echo=TRUE, message=FALSE, include=TRUE, eval=TRUE}
+# Using stargazer for getting a summary of the regression
+stargazer(m1, m2, type="text")
+
+
+# Add title and covariate labels
+stargazer(m1, m2, type="text",
+          title            = "Table 1",                          # Give a title to the table 
+          covariate.labels = c("Hispanic", "Black"))             # Choose the labels for the variables you want to show  
+
+
+# Adding captions for the dependent variable and the type of model
+stargazer(m1, m2, type="text",
+          title            = "Table 1",                          # Give a title to the table 
+          covariate.labels = c("Hispanic", "Black"),             # Choose the labels for the variables you want to show  
+          dep.var.caption  = "OLS Models",                       # Name your columns
+          dep.var.labels   = "Voted")                            # Name your dependent variable
+
+
+# Add lines to the table, keep only certain variables
+stargazer(m1, m2, type="text",
+          title            = "Table 1",                          # Give a title to the table 
+          covariate.labels = c("Hispanic", "Black"),             # Choose the labels for the variables you want to show  
+          dep.var.caption  = "OLS Models",                       # Name your columns
+          dep.var.labels   = "Voted",                            # Name your dependent variable
+          add.lines = list(c("Controls", "No", "Yes")),          # add lines of info
+          keep = c("black","hisp"))                              # keep certain variables  
+
+
+# Exporting the data
+stargazer(m1, m2, type="text",
+          title            = "Table 1",                          # Give a title to the table 
+          covariate.labels = c("Hispanic", "Black"),             # Choose the labels for the variables you want to show  
+          dep.var.caption  = "OLS Models",                       # Name your columns
+          dep.var.labels   = "Voted",                            # Name your dependent variable
+          add.lines = list(c("Controls", "No", "Yes")),          # add lines of info
+          keep = c("black","hisp"),                              # keep certain variables  
+          out="table1.doc")                                      # for nicer looking exported tables change text for html in type
+          
+```
+
 
 ### Dichotomous and continuous variables
 
@@ -125,7 +191,8 @@ library(arm)                                         # you will need to install 
 coefplot(m2,                                         # the model you want to graph
          intercept = F,                              # if you want to include the intercept
          main = "Coefficient Plot",                  # Title
-         varnames = c("intercept", "Black", "Hispanic", "Ideology", "Income", "Age", "Education"))
+         varnames = c("intercept", "Hispanic", "Black", "Education", "Party Identification", "Income", "Age"))
+
 ```
 
 Let's run a new model and graph it's results.
@@ -152,7 +219,7 @@ coefMat[,1] <- out$coefficients[2:n,1]
 coefMat[,2] <- out$coefficients[2:n,2]
 coefMat[,3] <- coefMat[,1] - qnorm(1-0.05/2)*coefMat[,2]
 coefMat[,4] <- coefMat[,1] + qnorm(1-0.05/2)*coefMat[,2]
-rownames(coefMat) <- c("Black", "Hispanic", "Ideology", "Income", "Age", "Education")
+rownames(coefMat) <- c("Hispanic", "Black", "Education", "Party Identification", "Income", "Age")
 colnames(coefMat) <- c("coef", "std_err", "min", "max")
 df <- as.data.frame(coefMat)
 # Plot
@@ -183,10 +250,10 @@ In this case:
    + $\beta_3$ is the interaction effect, it is the marginal effect of being hispanic at each level of income
 
 
-Let's run and interpret another interaction model
-```{r inter_st, eval=FALSE}
-m5 <- ___(_____)
-summary(m5)
+Let's run and interpret another interaction model between being Hispanic and education.
+```{r inter_st, eval=FALSE, include=TRUE}
+m4 <- ___(_____)
+summary(m4)
 ```
 
 ## **Predictions and Marginal Effects**
