@@ -11,6 +11,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+rm(list=ls())
 knitr::opts_chunk$set(echo = TRUE)
 setwd("C:/Users/Mateo Chaparro/Dropbox/Documentos/0_Duke/4_FourthYear/1_Summer/RBSI") 
 library(ggplot2)
